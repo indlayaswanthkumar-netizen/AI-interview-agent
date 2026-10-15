@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String             @id @default(cuid())
+  name         String
+  email        String             @unique
+  passwordHash String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  profile      Profile?
+  interviews   InterviewSession[]
+}
+
+model Profile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetRole        String?
+  experienceLevel   String?  // Beginner, Fresher, Mid-Level, Senior
+  skills            String?  // Stored as comma-separated or JSON string
+  preferredLanguage String?  @default("English")
+  interviewGoals    String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model InterviewSession {
+  id            String              @id @default(cuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobRole       String
+  interviewType String              // TECHNICAL, HR, BEHAVIORAL, CODING, MIXED
+  difficulty    String              // BEGINNER, INTERMEDIATE, ADVANCED
+  status        String              @default("IN_PROGRESS") // IN_PROGRESS, COMPLETED, ABANDONED
+  questionLimit Int                 @default(5)
+  mode          String              @default("TEXT") // TEXT, VOICE
+  startedAt     DateTime            @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  questions     InterviewQuestion[]
+  evaluation    InterviewEvaluation?
+
+  @@index([userId])
+}
+
+model InterviewQuestion {
+  id           String           @id @default(cuid())
+  sessionId    String
+  session      InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  orderIndex   Int
+  questionText String
+  category     String
+  difficulty   String
+  skill        String?
+  isFollowUp   Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  answer       InterviewAnswer?
+
+  @@index([sessionId])
+}
+
+model InterviewAnswer {
+  id          String            @id @default(cuid())
+  questionId  String            @unique
+  question    InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answerText  String
+  submittedAt DateTime          @default(now())
+}
+
+model InterviewEvaluation {
+  id                  String           @id @default(cuid())
+  sessionId           String           @unique
+  session             InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  overallScore        Int
+  communicationScore  Int
+  technicalScore      Int
+  relevanceScore      Int
+  problemSolvingScore Int
+  summary             String
+  strengths           String           // JSON string of array
+  improvements        String           // JSON string of array
+  questionFeedback    String           // JSON string of array of feedback
+  recommendedTopics   String           // JSON string of array
+  createdAt           DateTime         @default(now())
+}
